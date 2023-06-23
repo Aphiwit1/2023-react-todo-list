@@ -1,77 +1,92 @@
-import { useState } from "react";
+import { useState, useReducer } from "react";
 import "./App.css";
 
 function App() {
-  const [todo, setTodo] = useState([
-    {
-      id: 0,
-      todoText: "Do your jobs",
-      isComplete: false,
-    },
-    {
-      id: 1,
-      todoText: "Drinks 8 cups of water/day",
-      isComplete: false,
-    },
-  ]);
-
   const [text, setText] = useState("");
   const [editMode, setEditMode] = useState(false);
-  const [editId, setEditId] = useState(0)
-
+  const [editId, setEditId] = useState(0);
+  // START: REDUCER
+  const todoListReducer = (state: any, action: any) => {
+    switch (action.type) {
+      case "ADD":
+        return { ...state, todos: [...state.todos, action.payload] };
+      case "REMOVE":
+        return {
+          ...state,
+          todos: state.todos.filter((item: any) => item.id !== action.payload),
+        };
+      case "TOGGLE":
+        return {
+          ...state,
+          todos: state.todos.map((item: any) => {
+            if(item.id === action.payload) {
+              return {...item, isComplete: !item.isComplete};
+            } else {
+              return {...item}
+            }
+          })
+        };
+      case 'EDIT':
+      return {
+        ...state, todos: state.todos.map((item: any) => {
+          if(item.id === action.payload) {
+            return { ...item, todoText: text}
+          } else {
+            return { ...item}
+          }
+        })
+      }
+    }
+  };
+  const initialState = {
+    todos: [
+      {
+        id: 0,
+        todoText: "Do your jobs",
+        isComplete: false,
+      },
+    ],
+  };
+  const [state, dispatch] = useReducer(todoListReducer, initialState);
+  // END: REDUCER
   const handleText = (e: any) => {
     setText(e.target.value);
   };
 
   const todoToggle = (todoId: number) => {
-    const updateToggle = todo.map((item) => {
-      if (todoId == item.id) {
-        return { ...item, isComplete: !item.isComplete };
-      } else {
-        return { ...item };
-      }
-    });
-
-    setTodo(updateToggle);
+    dispatch({type:'TOGGLE', payload:todoId})
   };
 
   const editTodo = (todoId: number) => {
-    setEditMode(true)
-    setEditId(todoId)
-    const editText = todo.find((item) => item.id === todoId) 
-    if(editText) {
+    setEditMode(true);
+    setEditId(todoId);
+    const editText = state.todos.find((item: any) => item.id === todoId);
+    if (editText) {
       setText(editText.todoText);
     }
-
-  }
-
-  const removeTodo = (id: number) => {
-    const updateTodo = todo.filter((item) => item.id !== id);
-    setTodo(updateTodo);
   };
 
-  const submitForm = (e: any) => {
+  const removeTodo = (id: number) => {
+    dispatch({ type: "REMOVE", payload: id });
+  };
+
+  const submitForm = async (e: any) => {
     e.preventDefault();
-
     if (editMode) {
-      // const updateTodo = todo.map((item) => {})
-      const updateTodo = todo.map(item => {
-         if(item.id === editId) {
-          return {...item, todoText: text}
-         } else {
-          return {...item}
-         }
-      })
-
-      setTodo(updateTodo)
+      await dispatch({type:'EDIT', payload: editId})
+      setEditMode(false)
+      setText("")
     } else {
       const updateTodo = {
         id: +Math.floor(Math.random() * 100),
         todoText: text,
         isComplete: false,
       };
-      setTodo([...todo, updateTodo]);
+      await dispatch({ type: "ADD", payload: updateTodo });
     }
+
+
+
   };
 
   return (
@@ -84,22 +99,22 @@ function App() {
           onChange={handleText}
         />
         <button type="submit" name="submit-button">
-          Add Todo
+          { editMode ? 'Edit Todo' : 'Add Todo' }
         </button>
       </form>
 
       <div>
-        {todo.map((todo) => (
-          <li>
+        {state.todos.map((item: any) => (
+          <div key={item.id}>
             <input
               type="checkbox"
-              checked={todo.isComplete}
-              onChange={() => todoToggle(todo.id)}
+              checked={item.isComplete}
+              onChange={() => todoToggle(item.id)}
             />
-            <span key={todo.id}>{todo.todoText}</span>
-            <button onClick={() => editTodo(todo.id)}>Edit</button>
-            <button onClick={() => removeTodo(todo.id)}>Delete</button>
-          </li>
+            <span >{item.todoText}</span>
+            <button onClick={() => editTodo(item.id)}>Edit</button>
+            <button onClick={() => removeTodo(item.id)}>Delete</button>
+          </div>
         ))}
       </div>
     </>
